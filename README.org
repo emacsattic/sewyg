@@ -1,0 +1,6 @@
+* SIE
+
+  Scuttle Interface for Emacs
+
+  This is a simple set of functions that will try to connect to a
+  scuttle instance and access bookmarks through its api.
