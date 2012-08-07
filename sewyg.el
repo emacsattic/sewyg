@@ -1,4 +1,4 @@
-;;; sie.el --- Scuttle Interface for Emacs
+;;; sewyg.el --- Scuttle in Emacs is What You Get
 
 ;; Copyright (C) 2012 Tom Willemsen <tom@ryuslash.org>
 
@@ -29,66 +29,66 @@
 (require 'auth-source)
 (require 'xml)
 
-(defvar sie-scuttle-api-url "http://pegas/scuttle/api/"
+(defvar sewyg-scuttle-api-url "http://pegas/scuttle/api/"
   "Location of the Scuttle API.")
 
-(defvar sie-user nil
+(defvar sewyg-user nil
   "Username to authenticate scuttle with.")
 
-(defvar sie-password nil
+(defvar sewyg-password nil
   "Password to authenticate scuttle with.")
 
-(defgroup sie nil
+(defgroup sewyg nil
   "Scuttle Interface for Emacs."
   :group 'applications)
 
-(defface sie-description
+(defface sewyg-description
   '((t (:inherit shadow)))
   "Face for bookmark descriptions."
-  :group 'sie)
+  :group 'sewyg)
 
-(defmacro sie-get-prop (prop post)
+(defmacro sewyg-get-prop (prop post)
   `(cdr (assq ,prop (cadr ,post))))
 
-(defmacro sie-getset (var prompt &optional passwd)
+(defmacro sewyg-getset (var prompt &optional passwd)
   "Ask the user for, and then save, VAR with PROMPT.  Use
 `read-passwd' if PASSWD is non-nil and `read-string' otherwise."
   `(or ,var (setq ,var (,(if passwd 'read-passwd 'read-string)
                         ,prompt))))
 
-(defun sie-get-credentials ()
+(defun sewyg-get-credentials ()
   "Search in `auth-sources' or ask the user for a username and
 password to log in with."
-  (let ((credentials (auth-source-search :max 1 :host sie-scuttle-api-url
+  (let ((credentials (auth-source-search :max 1 :host sewyg-scuttle-api-url
                                          :type 'netrc
                                          :require '(:user :secret)
-                                         :user sie-user)))
+                                         :user sewyg-user)))
     (if credentials
-        (setq sie-user (plist-get (car credentials) :user)
-              sie-password (plist-get (car credentials) :secret))
-      (sie-getset sie-user "Username: ")
-      (sie-getset sie-password "Password: " t))))
+        (setq sewyg-user (plist-get (car credentials) :user)
+              sewyg-password (plist-get (car credentials) :secret))
+      (sewyg-getset sewyg-user "Username: ")
+      (sewyg-getset sewyg-password "Password: " t))))
 
-(defun sie--password ()
-  "Return the stored password.  If `sie-password' is a
+(defun sewyg--password ()
+  "Return the stored password.  If `sewyg-password' is a
 function, return the result of that function, otherwise return it
 as-is."
-  (if (functionp sie-password)
-      (funcall sie-password)
-    sie-password))
+  (if (functionp sewyg-password)
+      (funcall sewyg-password)
+    sewyg-password))
 
-(defun sie-credential-header ()
+(defun sewyg-credential-header ()
   "Generate the Authorization header to send along to Scuttle."
   (concat "Basic " (base64-encode-string
-                    (concat sie-user ":" (sie--password)))))
+                    (concat sewyg-user ":" (sewyg--password)))))
 
-(defun sie-send-command (command)
-  "Send a request to sie for COMMAND."
+(defun sewyg-send-command (command)
+  "Send a request to sewyg for COMMAND."
   (let* ((url-request-extra-headers
-          `(("Authorization" . ,(sie-credential-header))))
+          `(("Authorization" . ,(sewyg-credential-header))))
          (buffer (url-retrieve-synchronously
                   (url-encode-url
-                   (concat sie-scuttle-api-url command))))
+                   (concat sewyg-scuttle-api-url command))))
          response)
     (with-current-buffer buffer
       (goto-char (point-min))
@@ -98,21 +98,21 @@ as-is."
     (kill-buffer buffer)
     response))
 
-(define-derived-mode sie-list-mode special-mode "Sie"
+(define-derived-mode sewyg-list-mode special-mode "Sewyg"
   "Major mode for viewing bookmarks from scuttle.
 
 \\{avandu-overview-map}
 \\<avandu-overview-map>")
 
 ;;;###autoload
-(defun sie-bookmark-list (tag)
+(defun sewyg-bookmark-list (tag)
   "Show a list of all the bookmarks collected."
   (interactive "MTag: ")
-  (unless (and sie-user sie-password)
-    (sie-get-credentials))
+  (unless (and sewyg-user sewyg-password)
+    (sewyg-get-credentials))
 
-  (let ((buffer (get-buffer-create "*sie-bookmarks*"))
-        (result (sie-send-command (concat "posts_all.php?tag=" tag))))
+  (let ((buffer (get-buffer-create "*sewyg-bookmarks*"))
+        (result (sewyg-send-command (concat "posts_all.php?tag=" tag))))
     (with-current-buffer buffer
       (setq buffer-read-only nil)
       (erase-buffer)
@@ -121,16 +121,16 @@ as-is."
                 (unless (stringp elt)
                   (when (eq 'post (car elt))
                     (insert-button
-                     (sie-get-prop 'description elt)
-                     'link (sie-get-prop 'href elt)
+                     (sewyg-get-prop 'description elt)
+                     'link (sewyg-get-prop 'href elt)
                      'action #'(lambda (button)
                                  (browse-url (button-get button 'link))))
                     (insert-char ?\n)
 
                     (let ((pos (point)))
                       (insert-char ?\t)
-                      (insert (propertize (sie-get-prop 'description elt)
-                                          'face 'sie-description))
+                      (insert (propertize (sewyg-get-prop 'description elt)
+                                          'face 'sewyg-description))
                       (fill-region pos (point)))
 
                     (insert-char ?\n)
@@ -141,21 +141,21 @@ as-is."
                                 (insert-button
                                  tag
                                  'action #'(lambda (button)
-                                             (sie-bookmark-list (button-label button))))
+                                             (sewyg-bookmark-list (button-label button))))
                                 (insert-char ?\ ))
-                            (split-string (sie-get-prop 'tag elt)))
+                            (split-string (sewyg-get-prop 'tag elt)))
                       (fill-region pos (point)))
 
                     (insert-char ?\n 2))))
             (cdr (assq 'posts result)))
       (setq buffer-read-only t)
       (goto-char (point-min))
-      (sie-list-mode))
+      (sewyg-list-mode))
     (switch-to-buffer buffer)))
 
-(provide 'sie)
+(provide 'sewyg)
 
-;;; sie.el ends here
+;;; sewyg.el ends here
 ;; (posts-update)
 ;; (posts-add url description &keyword extended tags date replace shared)
 ;; (posts-delete url)
